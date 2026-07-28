@@ -159,6 +159,31 @@ La modernización del sistema se aborda en 6 fases incrementales. Esta primera f
 
 ---
 
+## ✨ Mejoras Funcionales Propuestas (Alcance Propio)
+
+Además de los entregables obligatorios de la rúbrica, se identificó una limitación funcional en el sistema legado: el motor de búsqueda actual exige combinar múltiples filtros (título, género, calificación mínima) para generar una recomendación, lo cual con frecuencia **no arroja resultados** si el cruce de criterios es demasiado estricto. A partir de este hallazgo, se propone la siguiente mejora de experiencia de usuario y funcionalidad, como decisión propia fuera del alcance mínimo solicitado:
+
+1. **Rediseño visual** de la interfaz hacia una estética moderna, tipo "sala de premiación" (inspirada en los Oscars), reemplazando el estilo genérico actual.
+2. **Catálogo inicial visible**: la página mostrará una lista de películas destacadas desde el primer momento, sin necesidad de usar el buscador. Se aprovechará la función `get_top_movies()` (filtrado demográfico), actualmente implementada pero no conectada a la vista principal.
+3. **Búsqueda por título con resultado + recomendaciones**: al buscar una película por nombre, la interfaz mostrará la película encontrada junto con sus recomendaciones asociadas (el motor de contenido/TMDB ya existente), en lugar de mostrar únicamente las recomendaciones.
+4. **Búsqueda flexible por criterio único**: se ampliará el motor de búsqueda para permitir:
+   - Buscar **solo por género**, listando todas las películas disponibles de esa categoría (aprovechando `Movie.get_movies_by_genre()`, ya definido en el modelo pero no expuesto en las rutas).
+   - Buscar **solo por título**, sin exigir género ni calificación mínima como filtros obligatorios.
+
+**Cambios técnicos que implica:**
+
+| Cambio | Componente afectado |
+|---|---|
+| Nuevo endpoint / modificación de `/recommendations` para catálogo inicial | `app/routes/recommendations.py` |
+| Exposición de `Movie.get_movies_by_genre()` en las rutas | `app/routes/recommendations.py`, `app/models/movie.py` |
+| Parámetros de búsqueda opcionales e independientes (título y/o género) | `app/routes/recommendations.py` |
+| Renderizado de la película buscada junto a sus recomendaciones | `static/js/main.js`, `templates/index.html` |
+| Rediseño de estilos (paleta, tipografía, layout tipo alfombra roja) | `static/css/style.css` |
+
+Este apartado se documentará con más detalle (capturas, decisiones de diseño) conforme avance su implementación.
+
+---
+
 ## ⚙️ Instalación y Ejecución (Actualizada)
 
 ### 1. Clonar el repositorio
