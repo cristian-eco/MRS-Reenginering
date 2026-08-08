@@ -1,9 +1,72 @@
 from flask import Blueprint, jsonify, request, render_template
 import requests
+import random
 from app.services.recommendation_service import get_recommendations, get_content_based_recommendations
 from config.config import Config
+from app.models.movie import Movie
 
 bp = Blueprint('recommendations', __name__)
+
+import random
+
+@bp.route('/featured')
+def get_featured_strip():
+    """
+    Obtiene películas aleatorias de alta calificación para el carrete horizontal,
+    asegurando que cambien dinámicamente y evitando duplicados con el catálogo.
+    """
+    try:
+        # 1. Obtener lista de IDs a excluir (enviados desde el frontend como ?exclude=1,2,3)
+        exclude_raw = request.args.get('exclude', '')
+        exclude_ids = set(int(x) for x in exclude_raw.split(',') if x.isdigit())
+
+        # 2. Obtener un conjunto amplio de buenas películas (ej. min_rating 7.0)
+        candidates = get_recommendations(genre="", n=60, min_rating=7.0)
+        
+        # 3. Filtrar las que no estén en la lista de exclusión
+        available_movies = [m for m in candidates if m.id not in exclude_ids]
+
+        # Si no quedan suficientes tras la exclusión, usamos las candidatas normales
+        if len(available_movies) < 8:
+            available_movies = candidates
+
+        # 4. Seleccionar 8 películas aleatorias en cada petición
+        selected_movies = random.sample(available_movies, min(len(available_movies), 8))
+        
+        featured_list = []
+        for movie in selected_movies:
+            movie_data = process_movie_from_db(movie)
+            if movie_data and movie_data.get('poster_path'):
+                featured_list.append(movie_data)
+                
+        return jsonify(featured_list)
+    except Exception as e:
+        print(f"Error al obtener películas destacadas dinámicas: {e}")
+        return jsonify([]), 500
+
+@bp.route("/catalog")
+def get_catalog():
+    """
+    Devuelve un catálogo inicial más variado mezclando géneros
+    y selecciones aleatorias de la base de datos.
+    """
+    try:
+        # Obtenemos un grupo más amplio de películas (ej. 80 candidatas) con rating aceptable (>= 6.0)
+        candidates = get_recommendations(genre="", n=80, min_rating=6.0)
+        
+        # Seleccionamos 24 de forma aleatoria en cada carga/recarga
+        if len(candidates) >= 24:
+            selected_movies = random.sample(candidates, 24)
+        else:
+            selected_movies = candidates
+
+        return jsonify([
+            process_movie_from_db(movie)
+            for movie in selected_movies
+        ])
+    except Exception as e:
+        print(f"Error cargando catálogo variado: {e}")
+        return jsonify([]), 500
 
 def fetch_movie_data(movie_id):
     url = f"{Config.TMDB_BASE_URL}/movie/{movie_id}?api_key={Config.TMDB_API_KEY}&language=en-US"

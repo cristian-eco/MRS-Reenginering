@@ -1,88 +1,125 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Movie Recommendation System</title>
+    <title>CineMatch | Discover your next masterpiece</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <!-- <link rel="stylesheet" href="{{ url_for('static', filename='css/abstract-theme.css') }}"> -->
-    <!-- <link rel="stylesheet" href="{{ url_for('static', filename='css/modern-palette.css') }}"> -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600;700;800&display=swap"
+        rel="stylesheet">
 </head>
+
 <body>
-    <div class="container fade-in">
-        <header>
-            <h1 class="pulse">CineMatch</h1>
-            <p class="tagline">Your Personal Movie Recommendation Engine</p>
-        </header>
-        <main>
-            <section class="info-section slide-in">
-                <h2>How It Works</h2>
-                <div class="info-grid">
-                    <div class="info-card hover-effect">
-                        <i class="fas fa-film"></i>
-                        <h3>Enter a Movie</h3>
-                        <p>Start by entering a movie title you enjoy.</p>
-                    </div>
-                    <div class="info-card hover-effect">
-                        <i class="fas fa-theater-masks"></i>
-                        <h3>Choose a Genre</h3>
-                        <p>Select your preferred genre for recommendations.</p>
-                    </div>
-                    <div class="info-card hover-effect">
-                        <i class="fas fa-star"></i>
-                        <h3>Set Minimum Rating</h3>
-                        <p>Choose the minimum rating for recommended movies.</p>
-                    </div>
-                    <div class="info-card hover-effect">
-                        <i class="fas fa-list-ol"></i>
-                        <h3>Number of Recommendations</h3>
-                        <p>Decide how many movie suggestions you want to see.</p>
-                    </div>
+
+    <!-- HERO & BÚSQUEDA PRINCIPAL -->
+    <header class="hero">
+        <div class="hero-overlay">
+            <h1>CineMatch</h1>
+            <p>Discover your next cinematic masterpiece</p>
+
+            <form id="recommendationForm">
+                <div class="search-container">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="movieTitle" placeholder="Search by movie title...">
                 </div>
-            </section>
-            <section class="input-section slide-in">
-                <form id="recommendationForm" class="modern-form">
-                    <input type="text" id="movieTitle" placeholder="Enter a movie title" class="transition-all">
-                    <select id="genre" required class="transition-all">
-                        <option value="">Select a genre</option>
+                <button type="submit">Find Recommendations</button>
+            </form>
+        </div>
+    </header>
+
+    <!-- CARRETE DE PELÍCULA ANIMADO (Movido afuera para que tenga espacio 100% real) -->
+    <div class="film-strip-wrapper">
+        <div id="filmStripTrack" class="film-strip-track">
+            <!-- JS inyectará los marcos aquí -->
+        </div>
+    </div>
+
+    <main class="container">
+        <!-- FILTROS AVANZADOS -->
+        <section class="filters">
+            <details>
+                <summary>
+                    <i class="fas fa-sliders-h"></i> Advanced Filters
+                </summary>
+
+                <div class="filters-header">
+                    <h3>Advanced Search</h3>
+                    <p>Leave any field empty if you don't want to filter by it.</p>
+                </div>
+
+                <div class="filters-grid">
+                    <select id="genre">
+                        <option value="">Any Genre</option>
                         <option value="Action">Action</option>
+                        <option value="Adventure">Adventure</option>
+                        <option value="Animation">Animation</option>
                         <option value="Comedy">Comedy</option>
+                        <option value="Crime">Crime</option>
                         <option value="Drama">Drama</option>
-                        <option value="Sci-Fi">Sci-Fi</option>
+                        <option value="Fantasy">Fantasy</option>
                         <option value="Horror">Horror</option>
                         <option value="Romance">Romance</option>
+                        <option value="Sci-Fi">Sci-Fi</option>
                         <option value="Thriller">Thriller</option>
-                        <option value="Animation">Animation</option>
                     </select>
-                    <input type="number" id="minRating" placeholder="Minimum rating" min="0" max="10" step="0.1" required class="transition-all">
-                    <input type="number" id="numRecommendations" placeholder="Number of recommendations" min="1" max="20" value="10" required class="transition-all">
-                    <button type="submit" id="getRecommendations" class="transition-all pulse-on-hover">Get Recommendations</button>
-                </form>
-            </section>
-            <section id="results" class="fade-in" style="display: none;">
-                <h2 class="slide-in">Recommended Movies</h2>
-                <div id="recommendations" class="recommendations-grid"></div>
-            </section>
-            <!-- Add this modal structure -->
-            <div id="movieModal" class="movie-modal" style="display: none;">
-                <div class="modal-content">
-                    <span class="close-modal">&times;</span>
-                    <img id="modalImage" src="" alt="Movie Poster">
-                    <div class="modal-info">
-                        <h2 id="modalTitle"></h2>
-                        <p id="modalRating"><strong>Rating:</strong> <span></span></p>
-                        <p id="modalGenres"><strong>Genres:</strong> <span></span></p>
-                        <p id="modalOverview"><strong>Overview:</strong> <span></span></p>
-                    </div>
+
+                    <input type="number" id="minRating" min="0" max="10" step="0.1" placeholder="Minimum Rating">
+                    <input type="number" id="numRecommendations" min="1" max="20" placeholder="Number of movies">
                 </div>
+            </details>
+        </section>
+
+        <!-- ESTADÍSTICAS -->
+        <section class="stats">
+            <div class="stat-card">
+                <h2>4,800+</h2>
+                <p>Movies</p>
             </div>
-        </main>
-        <footer class="fade-in">
-            <p>© 2024 CineMatch - Advanced Movie Recommendation System</p>
-        </footer>
-    </div>
+            <div class="stat-card">
+                <h2>10+</h2>
+                <p>Genres</p>
+            </div>
+            <div class="stat-card">
+                <h2>TMDB</h2>
+                <p>Powered by</p>
+            </div>
+        </section>
+
+        <!-- CATÁLOGO PRINCIPAL -->
+        <section class="catalog-section">
+            <div class="section-title">
+                <h2 id="catalogTitle">
+                    <i class="fas fa-film"></i> Featured Movies
+                </h2>
+                <p>Browse our collection or search for personalized recommendations.</p>
+            </div>
+
+            <!-- CORREGIDO: Descomentado para que JS pueda inyectar las tarjetas -->
+            <div id="recommendations" class="recommendations-grid">
+            </div>
+            <!-- CONTROLES DE PAGINACIÓN -->
+            <div class="pagination-container"
+                style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 50px;">
+                <button id="prevPageBtn" style="padding: 10px 20px; border-radius: 8px;"><i
+                        class="fas fa-chevron-left"></i> Anterior</button>
+                <span id="pageIndicator" style="color: #d4af37; font-weight: 600; font-size: 1.1rem;">Página 1</span>
+                <button id="nextPageBtn" style="padding: 10px 20px; border-radius: 8px;">Siguiente <i
+                        class="fas fa-chevron-right"></i></button>
+            </div>
+        </section>
+    </main>
+
+    <!-- FOOTER -->
+    <footer>
+        <h3>CineMatch</h3>
+        <p>Discover films you'll love through intelligent recommendations.</p>
+        <small>Movie Recommendation System • Reengineered Edition</small>
+    </footer>
+
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
+
 </html>

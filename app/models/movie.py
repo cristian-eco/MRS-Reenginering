@@ -8,12 +8,13 @@ class Movie:
         self.rating = rating
 
     @staticmethod
-    def get_all():
+    def get_all(limit=20):
         db = get_db()
         cursor = db.cursor()
-        cursor.execute("SELECT id, title, genres, vote_average FROM movies")
+        # Pedimos únicamente las 20 mejores o las primeras 20
+        cursor.execute("SELECT id, title, genres, vote_average FROM movies LIMIT ?", (limit,))
         return [Movie(id, title, genres, rating) for id, title, genres, rating in cursor.fetchall()]
-
+    
     @staticmethod
     def get_movies_by_genre(genre):
         db = get_db()
@@ -37,3 +38,11 @@ class Movie:
         cursor = db.cursor()
         cursor.execute("SELECT id, title, genres, vote_average FROM movies WHERE title LIKE ?", (f'%{title}%',))
         return [Movie(id, title, genres, rating) for id, title, genres, rating in cursor.fetchall()]
+
+    @staticmethod
+    def get_featured_movies(limit=8):
+        db = get_db()
+        cursor = db.cursor()
+        # Selecciona películas aleatorias para el carrete
+        cursor.execute("SELECT id, title, genres, vote_average, poster_path FROM movies ORDER BY RANDOM() LIMIT ?", (limit,))
+        return cursor.fetchall()
