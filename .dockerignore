@@ -1,0 +1,30 @@
+# Entornos virtuales
+venv/
+venv_test/
+env/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*$py.class
+
+# Base de datos (se genera en build time)
+data/movies.db
+
+# IDE
+.vscode/
+.idea/
+
+# Docs y otros
+README.md
+LICENSE
+*.log
+
+# Tests
+tests/
