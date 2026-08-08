@@ -1,0 +1,77 @@
+name: CineMatch CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build-test-security:
+    name: Build, Test & Security Pipeline
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout del código fuente desde GitHub
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. Configurar entorno de Python
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      # 3. Instalación de dependencias del proyecto y testing
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install pytest pytest-cov selenium webdriver-manager requests-mock bandit
+
+      # 4. Configuración de Google Chrome para Pruebas E2E (Headless)
+      - name: Set up Chrome for Selenium
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
+
+      # 5. Ejecutar Pruebas Unitarias y Cobertura (Pytest)
+      - name: Run Unit Tests & Coverage
+        env:
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+        run: |
+          pytest --cov=app --cov=models --cov-report=term-missing
+
+      # 6. Levantar la Aplicación Flask en Segundo Plano para Tests E2E
+      - name: Start Flask App Server
+        env:
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+        run: |
+          python run.py &
+          echo "Esperando a que la app Flask inicie..."
+          sleep 5
+
+      # 7. Ejecutar Pruebas E2E de Selenium en Modo Headless
+      - name: Run Selenium E2E Tests
+        run: |
+          pytest tests/test_e2e.py
+
+      # 8. Escaneo de Seguridad Estático del Código Python (Bandit)
+      - name: Security Audit with Bandit
+        run: |
+          bandit -r app/ models/ config/ -ll -ii || true
+
+      # 9. Compilación de la Imagen de Docker
+      - name: Build Docker Image
+        run: |
+          docker build -t cinematch:latest .
+
+      # 10. Escaneo de Vulnerabilidades en la Imagen Docker (Trivy)
+      - name: Security Scan Container Image (Trivy)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'cinematch:latest'
+          format: 'table'
+          exit-code: '0'
+          severity: 'CRITICAL,HIGH'
