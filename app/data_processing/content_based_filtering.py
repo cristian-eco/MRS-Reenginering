@@ -1,45 +1,54 @@
+import os
 import logging
 from ast import literal_eval
 import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity, linear_kernel
-
 from config.config import Config
 
 logging.basicConfig(level=logging.INFO)
 
 def prepare_content_based_data():
-    # 1. Cargar solo columnas esenciales para evitar sobrecargar RAM
-    df1 = pd.read_csv(Config.CREDITS_PATH, low_memory=False)
+    # 1. Cargar metadatos
     df2 = pd.read_csv(Config.MOVIES_METADATA_PATH, low_memory=False)
+    # DETECCIÓN DE ENTORNO:
+    # Si estamos en Render (donde existe la variable 'RENDER'), aplicamos el límite de 1000 películas.
+    # En tu computadora local (donde NO existe la variable 'RENDER'), se procesan las 4,803 películas completas.
+    is_render = os.environ.get('RENDER') is not None or os.environ.get('PORT') is not None
+    # 2. MUESTREO DE PRODUCCIÓN: Si estamos en Render u otro servidor con 512MB RAM,
+    # tomamos solo las 1,000 películas con más votos para mantener el servidor liviano.
+    if is_render:
+        logging.info("Entorno de Producción detectado (Render): Aplicando catálogo optimizado de 1000 películas.")
+        if 'vote_count' in df2.columns:
+            df2['vote_count'] = pd.to_numeric(df2['vote_count'], errors='coerce').fillna(0)
+            df2 = df2.sort_values('vote_count', ascending=False).head(1000)
+        else:
+            df2 = df2.head(1000)
+    else:
+        logging.info("Entorno Local detectado: Procesando el catálogo COMPLETO (4803 películas).")
+
+    df1 = pd.read_csv(Config.CREDITS_PATH, low_memory=False)
 
     df1['movie_id'] = df1['movie_id'].astype(str)
     df2['id'] = df2['id'].astype(str)
 
-    # Filtrar columnas indispensables de metadata
-    needed_cols = ['id', 'title', 'original_title', 'overview', 'genres']
-    existing_cols = [c for c in needed_cols if c in df2.columns]
-    df2 = df2[existing_cols]
-
-    # Unir DataFrames
+    # Merge de datos ya reducidos
     df = pd.merge(df2, df1, left_on='id', right_on='movie_id')
-    del df1, df2  # Liberar memoria de DataFrames origen
-    logging.info(f"Merged dataframe shape: {df.shape}")
+    del df1, df2
+    
+    logging.info(f"Merged dataframe shape para producción: {df.shape}")
 
     if 'title' not in df.columns:
-        if 'original_title' in df.columns:
-            df['title'] = df['original_title']
-        else:
-            df['title'] = 'Unknown Title'
+        df['title'] = df['original_title'] if 'original_title' in df.columns else 'Unknown Title'
 
     df['overview'] = df['overview'].fillna('')
     
-    # 2. Matriz TF-IDF (Convertir a float32 para ahorrar 50% de RAM)
-    tfidf = TfidfVectorizer(stop_words='english', max_features=5000)
+    # 3. TF-IDF ultraligero
+    tfidf = TfidfVectorizer(stop_words='english', max_features=1000)
     tfidf_matrix = tfidf.fit_transform(df['overview'])
     cosine_sim = linear_kernel(tfidf_matrix, tfidf_matrix).astype(np.float32)
-    del tfidf_matrix  # Liberar matriz dispersa
+    del tfidf_matrix
 
     features = ['cast', 'crew', 'keywords', 'genres']
     for feature in features:
@@ -57,16 +66,16 @@ def prepare_content_based_data():
 
     df['soup'] = df.apply(create_soup, axis=1)
 
-    # 3. Matriz Count Vectorizer (Convertir a float32)
-    count = CountVectorizer(stop_words='english', max_features=5000)
+    # 4. CountVectorizer ultraligero
+    count = CountVectorizer(stop_words='english', max_features=1000)
     count_matrix = count.fit_transform(df['soup'])
     cosine_sim2 = cosine_similarity(count_matrix, count_matrix).astype(np.float32)
-    del count_matrix  # Liberar memoria
+    del count_matrix
 
     df = df.reset_index(drop=True)
     indices = pd.Series(df.index, index=df['title']).drop_duplicates()
 
-    logging.info("Content-based data preparation completed efficiently")
+    logging.info("Procesamiento liviano completado con éxito")
     return df, cosine_sim2, indices
 
 def get_director(x):
@@ -96,21 +105,6 @@ def create_soup(x):
     director = x['director'] if isinstance(x['director'], str) else ''
     genres = ' '.join(x['genres']) if isinstance(x['genres'], list) else ''
     return f"{keywords} {cast} {director} {genres}"
-
-def get_recommendations(title, df, cosine_sim, indices):
-    idx = indices.get(title)
-    if idx is None:
-        logging.warning(f"Title '{title}' not found in the dataset")
-        return pd.Series(dtype=object)
-    
-    if isinstance(idx, pd.Series):
-        idx = idx.iloc[0]
-
-    sim_scores = list(enumerate(cosine_sim[idx]))
-    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
-    sim_scores = sim_scores[1:11]
-    movie_indices = [i[0] for i in sim_scores]
-    return df['title'].iloc[movie_indices]
 
 def safe_literal_eval(val):
     try:
