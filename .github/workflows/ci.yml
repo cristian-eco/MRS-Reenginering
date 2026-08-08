@@ -53,7 +53,7 @@ jobs:
       # 7. Ejecutar ÚNICAMENTE las Pruebas E2E de Selenium
       - name: Run Selenium E2E Tests
         run: |
-          pytest tests/test_e2e.py
+          pytest tests/test_e2e.py -v
 
       # 8. Auditoría de Seguridad con Bandit
       - name: Security Audit with Bandit
