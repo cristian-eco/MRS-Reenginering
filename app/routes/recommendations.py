@@ -1,13 +1,13 @@
-from flask import Blueprint, jsonify, request, render_template
-import requests
+import time
 import random
+import requests
+from flask import Blueprint, jsonify, request, render_template
 from app.services.recommendation_service import get_recommendations, get_content_based_recommendations
 from config.config import Config
 from app.models.movie import Movie
+from app.utils.database import get_db
 
 bp = Blueprint('recommendations', __name__)
-
-import random
 
 @bp.route('/featured')
 def get_featured_strip():
@@ -16,21 +16,15 @@ def get_featured_strip():
     asegurando que cambien dinámicamente y evitando duplicados con el catálogo.
     """
     try:
-        # 1. Obtener lista de IDs a excluir (enviados desde el frontend como ?exclude=1,2,3)
         exclude_raw = request.args.get('exclude', '')
         exclude_ids = set(int(x) for x in exclude_raw.split(',') if x.isdigit())
 
-        # 2. Obtener un conjunto amplio de buenas películas (ej. min_rating 7.0)
         candidates = get_recommendations(genre="", n=60, min_rating=7.0)
-        
-        # 3. Filtrar las que no estén en la lista de exclusión
         available_movies = [m for m in candidates if m.id not in exclude_ids]
 
-        # Si no quedan suficientes tras la exclusión, usamos las candidatas normales
         if len(available_movies) < 8:
             available_movies = candidates
 
-        # 4. Seleccionar 8 películas aleatorias en cada petición
         selected_movies = random.sample(available_movies, min(len(available_movies), 8))
         
         featured_list = []
@@ -51,10 +45,8 @@ def get_catalog():
     y selecciones aleatorias de la base de datos.
     """
     try:
-        # Obtenemos un grupo más amplio de películas (ej. 80 candidatas) con rating aceptable (>= 6.0)
         candidates = get_recommendations(genre="", n=80, min_rating=6.0)
         
-        # Seleccionamos 24 de forma aleatoria en cada carga/recarga
         if len(candidates) >= 24:
             selected_movies = random.sample(candidates, 24)
         else:
@@ -165,6 +157,28 @@ def get_movie_details(movie_id):
     if movie_data:
         return jsonify(movie_data)
     return jsonify({'error': 'Movie not found'}), 404
+
+# --- ENDPOINT DE MONITOREO Y SALUD (FASE 6) ---
+@bp.route('/api/health', methods=['GET'])
+def health_check():
+    """Endpoint de diagnóstico y monitoreo de la salud del servidor."""
+    db_status = "UP"
+    try:
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute("SELECT 1")
+    except Exception as e:
+        db_status = f"DOWN: {str(e)}"
+
+    return jsonify({
+        "status": "UP" if db_status == "UP" else "DEGRADED",
+        "timestamp": int(time.time()),
+        "services": {
+            "database": db_status,
+            "api": "UP"
+        },
+        "version": "2.0.0-reengineered"
+    }), 200 if db_status == "UP" else 500
 
 @bp.errorhandler(404)
 def not_found_error(error):
