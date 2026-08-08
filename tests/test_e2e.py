@@ -27,13 +27,16 @@ def driver():
 # ----------------------------------------------------------------------
 def test_e2e_carrete_horizontal(driver):
     driver.get(BASE_URL)
-    wait = WebDriverWait(driver, 15)
+    wait = WebDriverWait(driver, 20)  # Aumentamos a 20 segundos para CI/CD
     
-    # Validar que la página cargó correctamente
+    # Validar título de la aplicación
     assert "CineMatch" in driver.title or "Movie" in driver.page_source
     
-    # Esperar a que el carrete dinámico cargue elementos
+    # Esperar a que el contenedor principal del carrete esté en el DOM
     wait.until(EC.presence_of_element_located((By.ID, "filmStripTrack")))
+    
+    # Dar tiempo al fetch asíncrono de Flask para renderizar los marcos
+    time.sleep(2)
     frames = wait.until(EC.presence_of_all_elements_located((By.CLASS_NAME, "film-frame")))
     
     # Aserción: El carrete debe contener marcos de películas

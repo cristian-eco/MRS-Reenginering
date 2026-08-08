@@ -47,8 +47,8 @@ jobs:
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
         run: |
           python run.py &
-          echo "Esperando 5 segundos a que la app inicie en http://127.0.0.1:5000 ..."
-          sleep 5
+          echo "Esperando 10 segundos a que la app inicie en http://127.0.0.1:5000 ..."
+          sleep 10
 
       # 7. Ejecutar ÚNICAMENTE las Pruebas E2E de Selenium
       - name: Run Selenium E2E Tests
